@@ -28,10 +28,10 @@ bower_components
 
 # node-waf configuration
 .lock-wscript
-
+screenshots/
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
-
+pepes/
 # Dependency directories
 node_modules/
 jspm_packages/
@@ -59,3 +59,4 @@ typings/
 
 # next.js build output
 .next
+
