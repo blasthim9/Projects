@@ -9,6 +9,8 @@
   "author": "Michiel Mulders",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "^7.1.2",
+    "discord-prefix": "^2.0.0",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
     "screenshot-desktop": "^1.12.3"
