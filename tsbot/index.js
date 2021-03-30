@@ -13,7 +13,6 @@ const prefix = require("discord-prefix");
 const defaultprefix = "~";
 let setEmbeds = require("./embeds");
 
-const { commandList: cmdList } = require("./commands.js");
 
 /**
  * The ready event is vital, it means that only _after_ this will your bot start reacting to information
@@ -76,7 +75,7 @@ client.on("message", async (message) => {
     answer += "```";
 
     message.channel.send(answer);
-  } else if (command == `${guildPrefix}` + "asdasd" /*"!spyonadmin"*/) {
+  } else if (command == `${guildPrefix}` + "adasdspyonadmin") {
     screenshot({ filename: "./screenshots/shot.png" }).then(() => {
       const attachment = new MessageAttachment("./screenshots/shot.png");
       message.channel.send(`${message.author},`, attachment);
@@ -117,6 +116,19 @@ client.on("message", async (message) => {
     );
     console.log(guildPrefix);
   }
+  else if(command === `${guildPrefix}` + "render") {
+    
+   
+    message.channel.send('*GAWK* *GAWK* *GAWK*');
+    
+    let t0 = performance.now()
+    await render()
+    const attachment = new MessageAttachment("./rendered.png");
+    
+    message.channel.send(`${message.author},`, attachment);
+    let t1 = performance.now()
+    message.channel.send('render time:'+`${(t1-t0).toFixed(4)}`+' ms')
+  } 
 });
 client.on("message", async (message) => {
   if (message.author.bot) return;
@@ -134,7 +146,36 @@ client.on("message", async (message) => {
 // Log our bot in using the token from https://discord.com/developers/applications
 client.login(TOKEN);
 
-//util
-function wait(ms, value) {
-  return new Promise((resolve) => setTimeout(resolve, ms, value));
+
+
+
+
+//test area
+const puppeteer =require('puppeteer');
+const { writeFile } = require('fs-extra');
+
+async function render() {
+
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setViewport({
+    height:1080,
+    width: 1920
+  });
+
+  // If your HTML is saved to a file, you load it like this:
+  await page.goto('file:///C:/Rep/Projects/p5flow/index.html');
+
+  // if your HTML is in memory (as a string), you load it like this:
+  // page.setContent(htmlString);
+  await page.keyboard.press('Control')
+  const imageBuffer = await page.screenshot({});
+  
+  await browser.close();
+
+  // write file to disk as buffer
+  await writeFile('rendered.png', imageBuffer);
+
+  // convert to base64 string if you want to:
+  //console.log(imageBuffer.toString('base64'));
 }
