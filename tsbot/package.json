@@ -9,11 +9,17 @@
   "author": "Michiel Mulders",
   "license": "ISC",
   "dependencies": {
+    "@discordjs/opus": "^0.5.0",
     "@kibibit/kb-hologram": "^1.1.0",
     "better-sqlite3": "^7.1.2",
     "discord-prefix": "^2.0.0",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
-    "screenshot-desktop": "^1.12.3"
+    "ffmpeg": "^0.0.4",
+    "ffmpeg-static": "^4.2.8",
+    "fluent-ffmpeg": "^2.1.2",
+    "screenshot-desktop": "^1.12.3",
+    "youtube-search": "^1.1.6",
+    "ytdl-core": "^4.5.0"
   }
 }

@@ -6,6 +6,8 @@ let toggle = false;
 let transition = 1;
 let coggle = false;
 let btn1toggle = false;
+let img;
+
 const camPos = {
   x: 0,
   y: 0,
@@ -77,11 +79,11 @@ function setup() {
   input = createInput();
   input.position(-500, 65);
   input.style("width","30px")
-
   
-  frameRate(20)
-  createLoop({duration:3, gif:true})
-  //cam.lookAt(width / 2, height / 2, 0);
+  
+  // frameRate(20)
+  // createLoop({duration:3, gif:true})
+  
 }
 
 function draw() {
@@ -106,7 +108,7 @@ function draw() {
     for (let x = 0; x < cols; x++) {
       let noiseparam = noise(xoff, yoff, zinc) * 255;
 
-      blendMode(BLEND);
+      blendMode(BLEND );
       noStroke();
       if (coggle === true) {
         rotateY(noise(xoff, yoff, zinc) / 10);
@@ -139,7 +141,7 @@ function draw() {
         Math.abs(Math.sin((noiseparam / 255) * 2 * Math.PI)) * 100,
         noiseparam
       );
-
+      
       rect(vec.x, vec.y, scale.x, scale.y);
 
       rect(2 * scale.x * cols - vec.x - scale.x, vec.y, scale.x, scale.y);
@@ -157,7 +159,7 @@ function draw() {
 
     yoff += inc;
   }
-
+ 
   //cam.lookAt(width, height, 0);
 }
 

@@ -1,5 +1,6 @@
 require("dotenv").config();
 TOKEN = process.env.TOKEN;
+
 const fs = require("fs");
 const { Client, MessageAttachment, DiscordAPIError } = require("discord.js");
 const Discord = require("discord.js");
@@ -12,8 +13,14 @@ const screenshot = require("screenshot-desktop");
 const prefix = require("discord-prefix");
 const defaultprefix = "~";
 let setEmbeds = require("./embeds");
+const ytdl = require("ytdl-core");
+const queue = new Map();
 
-
+const search = require("youtube-search");
+const opts = {
+  maxResults: 10,
+  key: process.env.KEY,
+};
 /**
  * The ready event is vital, it means that only _after_ this will your bot start reacting to information
  * received from Discord
@@ -30,7 +37,7 @@ client.on("message", async (message) => {
     prefix.setPrefix("~", message.guild.id);
     guildPrefix = defaultprefix;
   }
-
+  const serverQueue = queue.get(message.guild.id);
   let msgarr = message.content.split(" ");
   let command = msgarr[0];
   let args = msgarr.slice(1);
@@ -115,20 +122,29 @@ client.on("message", async (message) => {
       message.guild.name + " prefix: " + prefix.getPrefix(message.guild.id)
     );
     console.log(guildPrefix);
-  }
-  else if(command === `${guildPrefix}` + "render") {
-    
-   
-    message.channel.send('*GAWK* *GAWK* *GAWK*');
-    
-    let t0 = performance.now()
-    await render()
+  } else if (command === `${guildPrefix}` + "render") {
+    message.channel.send("*GAWK* *GAWK* *GAWK*");
+
+    let t0 = performance.now();
+    await render();
     const attachment = new MessageAttachment("./rendered.png");
-    
+
     message.channel.send(`${message.author},`, attachment);
-    let t1 = performance.now()
-    message.channel.send('render time:'+`${(t1-t0).toFixed(4)}`+' ms')
-  } 
+    let t1 = performance.now();
+    message.channel.send("render time:" + `${(t1 - t0).toFixed(4)}` + " ms");
+  } else if (message.content.startsWith(`${guildPrefix}play`)) {
+    execute(message, serverQueue);
+    return;
+  } else if (message.content.startsWith(`${guildPrefix}skip`)) {
+    skip(message, serverQueue);
+    return;
+  } else if (message.content.startsWith(`${guildPrefix}stop`)) {
+    stop(message, serverQueue);
+    return;
+  } else if (message.content.startsWith(`${guildPrefix}leave`)) {
+    message.channel.send("bye bitch");
+    message.member.voice.channel.leave();
+  }
 });
 client.on("message", async (message) => {
   if (message.author.bot) return;
@@ -143,39 +159,129 @@ client.on("message", async (message) => {
     console.log("done");
   }
 });
+
 // Log our bot in using the token from https://discord.com/developers/applications
 client.login(TOKEN);
 
-
-
-
-
 //test area
-const puppeteer =require('puppeteer');
-const { writeFile } = require('fs-extra');
+const puppeteer = require("puppeteer");
+const { writeFile } = require("fs-extra");
 
 async function render() {
-
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setViewport({
-    height:1080,
-    width: 1920
+    height: 1080,
+    width: 1920,
   });
 
   // If your HTML is saved to a file, you load it like this:
-  await page.goto('file:///C:/Rep/Projects/p5flow/index.html');
+  await page.goto("file:///C:/Rep/Projects/p5flow/index.html");
 
   // if your HTML is in memory (as a string), you load it like this:
   // page.setContent(htmlString);
-  await page.keyboard.press('Control')
-  const imageBuffer = await page.screenshot({});
-  
+  await page.keyboard.press("Control");
+  const imageBuffer = new Array();
+  for (let i = 0; i < 4; i++) {
+    imageBuffer.push(await page.screenshot({}));
+  }
   await browser.close();
 
   // write file to disk as buffer
-  await writeFile('rendered.png', imageBuffer);
+  for (let i in imageBuffer) {
+    await writeFile(`rendered${i}.png`, imageBuffer[i]);
+  }
 
   // convert to base64 string if you want to:
   //console.log(imageBuffer.toString('base64'));
+}
+
+async function execute(message, serverQueue) {
+  const args = message.content.split(" ");
+  const songname = args.slice(1,args.length).join(' ')
+  const voiceChannel = message.member.voice.channel;
+  if (!voiceChannel)
+    return message.channel.send("Must be in channel to play music!");
+  const permissions = voiceChannel.permissionsFor(message.client.user);
+  if (!permissions.has("CONNECT") || !permissions.has("SPEAK")) {
+    return message.channel.send("no permission :(!");
+  }
+  let validate = await ytdl.validateURL(args[1]);
+  console.log(validate);
+
+  
+  const results = await search(songname, opts)
+  args[1]= results.results[0].link
+  const songInfo = await ytdl.getInfo(args[1]);
+  console.log(args)
+  const song = {
+    title: songInfo.videoDetails.title,
+    url: songInfo.videoDetails.video_url,
+  };
+
+  if (!serverQueue) {
+    const queueContruct = {
+      textChannel: message.channel,
+      voiceChannel: voiceChannel,
+      connection: null,
+      songs: [],
+      volume: 5,
+      playing: true,
+    };
+
+    queue.set(message.guild.id, queueContruct);
+
+    queueContruct.songs.push(song);
+
+    try {
+      var connection = await voiceChannel.join();
+      queueContruct.connection = connection;
+      play(message.guild, queueContruct.songs[0]);
+      console.log(queueContruct)
+    } catch (err) {
+      console.log(err);
+      queue.delete(message.guild.id);
+      return message.channel.send(err);
+    }
+  } else {
+    serverQueue.songs.push(song);
+    return message.channel.send(`${song.title} has been added to the queue!`);
+  }
+}
+
+function skip(message, serverQueue) {
+  if (!message.member.voice.channel)
+    return message.channel.send("JOIN THE CHANNEL FIRST!");
+  if (!serverQueue) return message.channel.send("Song list empty idiot! ");
+  serverQueue.connection.dispatcher.end();
+}
+
+function stop(message, serverQueue) {
+  if (!message.member.voice.channel)
+    return message.channel.send("Denied! You must be in the voice channel");
+
+  if (!serverQueue) return message.channel.send("Song list empty retard!");
+
+  serverQueue.songs = [];
+  serverQueue.connection.dispatcher.end();
+}
+
+function play(guild, song) {
+  const serverQueue = queue.get(guild.id);
+  if (!song) {
+    serverQueue.voiceChannel.leave();
+    queue.delete(guild.id);
+    return;
+  }
+
+  const dispatcher = serverQueue.connection
+    .play(ytdl(song.url))
+    .on("finish", () => {
+      serverQueue.songs.shift();
+      play(guild, serverQueue.songs[0]);
+    })
+    .on("error", (error) => console.error(error));
+
+  dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
+  serverQueue.textChannel.send(`Current Song: **${song.title}**`);
 }
