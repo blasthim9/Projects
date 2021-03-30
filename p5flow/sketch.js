@@ -1,97 +1,107 @@
-let inc = 0.04;
+let inc = 0.03;
 let binc = 1;
 let donk = 0;
 let time = 0;
 let toggle = false;
 let transition = 1;
 let coggle = false;
+let btn1toggle = false;
 const camPos = {
   x: 0,
   y: 0,
   z: 0,
-};
-const scale = {
-  x: 15,
-  y: (async function () {
-    await setTimeout(function () {
-      scale.y = scale.x;
-    });
-  })(),
 
-  stretch: function (width, height) {
-    width > height
-      ? (this.y = height / (width / this.x))
-      : (this.x = width / (height / this.y));
+  updatePos: function (cols, rows) {
+    [this.x, this.y, this.z] = [cols * scale.x, rows * scale.y, 3000];
   },
 };
 
+const scale = {
+  x: 12,
+  y: 5,
+};
+
 let cols, rows;
-let mousehud = document.createElement("div");
-let canvas;
-let cam;
+
+
 
 let zinc = 0;
-document.body.appendChild(mousehud);
+let cam;
+let sliderxtaper;
+let sliderx;
+let input;
+let slidery;
+let buttons = [];
+let canvas;
+let ctx
 function setup() {
-  canvas = createCanvas(windowWidth, windowHeight, WEBGL);
+  //canvas = createCanvas(windowWidth, windowHeight, WEBGL);
   //scale.stretch(width,height)
-  canvas.id('wave')
+  //ctx.getContex('2d')
+  canvas =createCanvas(windowWidth, windowHeight, WEBGL);
+  
+  canvas.style('z-index','0')
+  canvas.id("wave");
+  cols = 200;
+  rows = 200;
+  
   cam = createCamera();
-  [camPos.x, camPos.y, camPos.z] = [width, height - 1000, 3000];
+  scale.y = random(5,9)
+  camPos.updatePos(cols, rows);
+  cam.setPosition(camPos.x, camPos.y, 5000);
+  cam.lookAt(camPos.x, camPos.y, camPos.x, camPos.z);
+  setCamera(cam);
+  
+  slidery = createSlider(0, 255, 0, 0);
+  slidery.position(-500, 10);
+  slidery.style("width", "80px");
+  slidery.value(random(0,255))
+  sliderx = createSlider(0, 255, 0, 0);
+  sliderx.position(-500, 25,-10);
+  sliderx.style("width", "80px");
+  sliderx.value(random(0,255))
+  
+  sliderxtaper = createSlider(-500, 100, 3.14, 0);
+  sliderxtaper.position(-500, 40);
+  sliderxtaper.style("width", "300px");
+  buttons.push(
+    createButton("play").position(
+      sliderxtaper.position().x + 300,
+      sliderxtaper.position().y,-10
+    )
+  );
+  
+ 
 
-  cam.setPosition(camPos.x, camPos.y, camPos.z);
-  //cam.lookAt(width / 2, height / 2, 0); 
-  cols = floor(windowWidth / scale.x);
-  rows = floor(height / scale.y);
-  rows = 2;
-  background("BLACK");
-  cam.lookAt(width, height - 1000, 0);
+
+  input = createInput();
+  input.position(-500, 65);
+  input.style("width","30px")
+
+  
+  frameRate(20)
+  createLoop({duration:3, gif:true})
+  //cam.lookAt(width / 2, height / 2, 0);
 }
 
 function draw() {
   //cols++;
   zinc += 0.008;
-  orbitControl();
+  input.value(sliderxtaper.value());
+  //orbitControl();
+  time =time+ 0.05;
   if (toggle == true) {
-    time += 0.00005;
+    time =time+ 0.05;
   }
-  if (keyIsDown(87)) {
-    rows++;
-  }
-  if (keyIsDown(69)) {
-    cols++;
-  }
-  if (keyIsDown(83)) {
-    rows--;
-  }
-  if (keyIsDown(68)) {
-    cols--;
-  }
-  if (keyIsDown(81)) {
-    coggle = false;
-    console.log("coggle is false");
-  }
-  if (keyIsDown(17)) {
-    toggle = true;
-    coggle = true;
-  }
-  // if (coggle === true) {
-  //   camPos.y+=15;
-  //   camPos.z+=25;
-  //   camPos.x+=20;
-  //   cam.setPosition(camPos.x, camPos.y, camPos.z);
-
-  //   cam.lookAt(width / 2, camPos.y, 600);
-  // }
+  buttons[0].mousePressed(()=>{play(sliderxtaper,btn1toggle,-100,100,.1)})
   canvas.position((windowWidth - width) / 2, (windowHeight - height) / 2);
   // if(keyIsDown(CONTROL)){
   //   background("#FF7F50");
   // }
   background("#4A5B6E");
-  let yoff = 0;
-
+  let yoff = time
   for (let y = 0; y < rows; y++) {
-    let xoff = 0;
+    let xoff = time
 
     for (let x = 0; x < cols; x++) {
       let noiseparam = noise(xoff, yoff, zinc) * 255;
@@ -99,22 +109,25 @@ function draw() {
       blendMode(BLEND);
       noStroke();
       if (coggle === true) {
-        rotateY(noise(xoff, yoff, zinc) / 100);
-        rotateX(noise(xoff, yoff, zinc) / 5);
-        rotateZ(noise(xoff, yoff, zinc) / 100);
+        rotateY(noise(xoff, yoff, zinc) / 10);
+        rotateX(noise(xoff, yoff, zinc) / input.value());
+        //rotateZ(noise(xoff, yoff, zinc) / 95);
         donk++;
       }
 
       let vec = new p5.Vector(x * scale.x, y * scale.y);
+
       if (toggle === true) {
         translate(
           0,
           0,
-          (noiseparam / 1000 - (noiseparam / 1000) * transition) * 3
+          (noiseparam / 1000 - (noiseparam / 1000) * transition) * .2
         );
-        vec.y += noiseparam * 3 - noiseparam * 3 * transition;
+        vec.y += noiseparam * 3;
+        vec.x += noiseparam * 3;
+        
         if (transition > 0) {
-          transition = transition - 0.000005;
+          transition = transition - 1;
         } else {
           transition = 0;
         }
@@ -123,7 +136,7 @@ function draw() {
       fill(
         Math.abs(Math.cos((noiseparam / 255) * 2 * Math.PI)) * 100,
         0,
-        Math.abs(Math.sin((noiseparam / 255) * 2 * Math.PI)) * 105,
+        Math.abs(Math.sin((noiseparam / 255) * 2 * Math.PI)) * 100,
         noiseparam
       );
 
@@ -144,5 +157,55 @@ function draw() {
 
     yoff += inc;
   }
+
   //cam.lookAt(width, height, 0);
+}
+
+function keyPressed() {
+  if (keyIsDown(87)) {
+    rows++;
+    camPos.updatePos(cols, rows);
+    cam.setPosition(camPos.x, camPos.y, camPos.z);
+    cam.lookAt(camPos.x, camPos.y, 0);
+  }
+  if (keyIsDown(69)) {
+    cols++;
+    camPos.updatePos(cols, rows);
+    cam.setPosition(camPos.x, camPos.y, camPos.z);
+    cam.lookAt(camPos.x, camPos.y, 0);
+  }
+  if (keyIsDown(83)) {
+    rows--;
+    camPos.updatePos(cols, rows);
+    cam.setPosition(camPos.x, camPos.y, camPos.z);
+    cam.lookAt(camPos.x, camPos.y, 0);
+  }
+  if (keyIsDown(68)) {
+    cols--;
+    camPos.updatePos(cols, rows);
+    cam.setPosition(camPos.x, camPos.y, camPos.z);
+    cam.lookAt(camPos.x, camPos.y, 0);
+  }
+  if (keyIsDown(81)) {
+    coggle = !coggle;
+    toggle = false;
+    
+  }
+  if (keyIsDown(17)) {
+    coggle = false;
+    toggle = !toggle;
+    
+  }
+}
+
+function play(slider, btntoggle, min = -100, max = 100, inc = 0.001) {
+  btntoggle = !btntoggle;
+
+  
+  if (slider.value() == max) {
+    max = min;
+    inc = -inc;
+    
+}
+slider.value(slider.value() + inc);
 }
