@@ -1,67 +1,124 @@
 "use strict";
 
-//y+x*n
 
-function Screen() {
-  this.scrnheight = 15;
-  this.pxcount = Math.pow(this.scrnheight, 2);
-  this.pixel = new Array(this.pxcount).fill("#");
-  this.changeSize = function (newHeight, newFill = "#") {
-    this.scrnheight = newHeight;
-    this.pxcount = Math.pow(newHeight, 2);
-    this.pixel = new Array(this.pxcount).fill(newFill);
-  };
-  this.draw = function () {
-    for (let i = 0; i < this.scrnheight; i++) {
-      let row = this.pixel.slice(
-        i * this.scrnheight,
-        i * this.scrnheight + this.scrnheight
-      );
-      console.log(row.join("  "));
-    }
-  };
-  this.Init = function(){
-      console.log('screen initialized')
+class Screen{
+  constructor(col,row,colSpread = ' '){
+    this.row = row
+    this.col = col
+    this.camCenter = new Point(0,0)
+    this.Init()
+    this.colSpread = ' '
   }
-  this.Init()
-}
-function Section(x, y, z = 0, r = 2, col = "+") {
-  this.x = x;
-  this.y = y;
-  this.z = z;
-  this.r = r;
-  this.col = col;
-}
-
-function Donut(numsec=30,donutradius=4) {
-  this.numsec = numsec;
-  this.donutradius = donutradius;
-  this.sections;
-  this.setGeometry = function (numsec = 30, donutradius = 4) {
-    this.numsec = numsec;
-    this.donutradius = donutradius;
-    this.Init();
-  };
-  this.getGeometry = function () {
-    return [this.numsec, this.donutradius];
-  };
-  this.getSections = function () {
-    return [...this.sections];
-  };
-  this.Init = function () {
-    this.sections = new Array();
-    for (let i = 0; i < this.numsec; i++) {
-      let theta = ((2 * Math.PI) / this.numsec) * i;
-      let x = Math.floor(Math.cos(theta) * this.donutradius);
-      let y = Math.floor(Math.sin(theta) * this.donutradius);
-      let z = 0;
-
-      this.sections.push(new Section(x, y, z));
+  Init(){
+    this.display = new Array(this.row*this.col).fill('#')
+    //this.draw()
+  }
+  tsupdate(x,y,color= '@'){
+    let scrnx = x+ this.col/2-this.camCenter.x
+    let scrny = y+ this.row/2-this.camCenter.y
+    this.display[this.toScreenPos(scrnx,scrny)] = color
+  }
+  tsdraw(){
+    
+    for(let i = 0; i<this.row;i++){
+      let line = this.display.slice(i*this.row,(i*this.row+this.col)).join(this.colSpread)
+      if(i===this.row/2){
+        
+        let result = line.slice(0,this.colSpread/2)+'\x1b[1m'
+        console.log(line.length,result)
+      }
+      //console.log(line)
+      
     }
-    console.log("donut initialized");
-  };
-  this.Init();
+    console.log('\n')
+  }
+  toScreenPos(x,y){
+    return((x-1)+(y-1)*this.row)
+  }
 }
-let scr1 = new Screen();
-let d1 = new Donut();
+class Point {
+  constructor(x, y, z) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
+  drotate(theta, axis = "z", origin = { x: 0, y: 0, z: 0 }) {
+    let rad = this.toRad(theta);
+    let sintheta = Math.sin(rad);
+    let costheta = Math.cos(rad);
+    let [x,y,z] = [this.x,this.y,this.z]
+    if (axis === "x") {
+      y = this.y * costheta - this.z * sintheta+origin.y;
+      z = this.z * sintheta + this.z * costheta+origin.z;
+    } else if (axis === "y") {
+      x = this.x * costheta + this.z * sintheta+origin.x;
+      z = this.z * costheta + this.x * sintheta+origin.z;
+    } else {
+      x = (this.x * costheta) - (this.y * sintheta)+origin.x;
+      y = (this.x * sintheta) + (this.y * costheta)+origin.y;
+      
+      //fix to degrees formula 
+    }
+    [this.x,this.y,this.z]=[x,y,z]
+    
+  }
+  toRad(angle) {
+    return (angle * Math.PI/180);
+  }
+}
 
+class Geometry {
+  constructor(x = 1, y = 1, z = 1) {
+    this.x=x
+    this.y=y
+    this.z=z
+    this.position = new Point(x, y, z);
+
+  }
+  getPos() {
+    return this.position;
+  }
+  setPos(x, y, z) {
+    this.position = { ...z };
+  }
+}
+class Circle extends Geometry {
+  #segments = [];
+  constructor(x, y, z, radius = 2, numSeg = 20) {
+    super(x,y,z);
+    
+    this.radius = radius;
+    this.numSeg = numSeg;
+    this.position = new Point(this.x,this.y,this.z)
+    
+    this.init();
+  }
+
+  init() {
+    for (let i = 0; i < this.numSeg; i++) {
+      let deg = (360/this.numSeg)*i
+
+      //example circle position [2,0,0] point [2,0,0] => rotate 2,0,0 around origin 2,0,0
+      this.#segments.push(new Point(this.radius,0,0));
+      
+      this.#segments[i].drotate(deg,'z',this.position)
+      console.log(this.#segments[i])
+     
+    }
+  }
+  getSegments() {
+    return this.#segments;
+  }
+}
+
+let c1 = new Circle(0,0,0,4,30);
+let geo = new Geometry()
+let canvas = new Screen(20,20) //top left is (0,0)
+for(let i of c1.getSegments()){
+ 
+  console.log(Math.floor(i.x),Math.floor(i.y))
+  canvas.tsupdate(Math.floor(i.x),Math.floor(i.y))
+
+}
+canvas.tsdraw()
+let arr = [1,2,3,4,5]

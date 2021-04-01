@@ -210,7 +210,7 @@ async function execute(message, serverQueue) {
   console.log(validate);
 
   
-  const results = await search(songname, opts)
+  let results = await search(songname, opts)
   args[1]= results.results[0].link
   const songInfo = await ytdl.getInfo(args[1]);
   console.log(args)
@@ -275,7 +275,10 @@ function play(guild, song) {
   }
 
   const dispatcher = serverQueue.connection
-    .play(ytdl(song.url))
+    .play(ytdl(song.url,{
+      quality: 'highestaudio',
+      highWaterMark: 1 << 25
+  }))
     .on("finish", () => {
       serverQueue.songs.shift();
       play(guild, serverQueue.songs[0]);
