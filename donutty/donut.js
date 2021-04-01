@@ -3,10 +3,10 @@ var term = require("terminal-kit").terminal;
 
 class TSScreen {
   #children = {};
-  constructor(col, row, render = "3d", background = "#", colSpread = " ") {
+  constructor(col, row, background = " ", colSpread = " ") {
     this.row = row;
     this.col = col;
-    this.camCenter = new Point(0, 0);
+    this.camCenter = new Point(0, 0,0);
     this.colSpread = colSpread;
     this.background = background;
     this.init();
@@ -29,11 +29,11 @@ class TSScreen {
       this.#children[child].update(this);
     }
   }
-  tsupdate(x, y, z, color = "@") {
+  tsupdate(x, y,z, color = "@") {
     let scrnx = x + Math.ceil(this.col / 2 - this.camCenter.x);
     let scrny = y + 1 + Math.ceil(this.row / 2 - this.camCenter.y);
     
-    if (!(scrnx >= this.col || scrny >= this.row || scrnx <= 0 || scrny <= 0)) {
+    if (!(scrnx > this.col || scrny > this.row || scrnx < 0 || scrny < 0)) {
       this.display[this.toScreenPos(scrnx, scrny)] = color;
     }
   }
@@ -72,19 +72,23 @@ class Point {
     let rad = this.toRad(theta);
     let sintheta = Math.sin(rad);
     let costheta = Math.cos(rad);
-    let [x, y, z] = [this.x, this.y, this.z];
+    let [x, y, z] = [this.x-origin.x, this.y-origin.y, this.z-origin.z];
     if (axis === "x") {
-      y = this.y * costheta - this.z * sintheta + origin.y;
-      z = this.y * sintheta + this.z * costheta + origin.z;
+      y = this.y * costheta - this.z * sintheta 
+      z = this.y * sintheta + this.z * costheta 
+      x = this.x
+  
     } else if (axis === "y") {
-      x = this.z * sintheta + this.z * costheta + origin.x;
-      z = this.z * costheta - this.x * sintheta + origin.z;
+      z = this.z * costheta - this.x * sintheta
+      x = this.z * sintheta + this.x * costheta 
+      y = this.y
     } else {
-      x = this.x * costheta - this.y * sintheta + origin.x;
-      y = this.x * sintheta + this.y * costheta + origin.y;
+      x = this.x * costheta - this.y * sintheta 
+      y = this.x * sintheta + this.y * costheta 
+      z = this.z
     }
-    [this.x, this.y, this.z] = [x, y, z];
-   
+    [this.x, this.y, this.z] = [x+origin.x, y+origin.y, z+origin.z];
+    //console.log(origin,'x:',Math.floor(this.x),'y:',Math.floor(this.y),'this.z',Math.floor(this.z))
   }
   toRad(angle) {
     return (angle * Math.PI) / 180;
@@ -109,9 +113,6 @@ class Geometry {
   setPos(x, y, z) {
     this.position = { ...z };
   }
-  bindTo(canvasContext) {
-    this.canvasContext = canvasContext;
-  }
 }
 class TSentity {
   createTsEntity(
@@ -129,27 +130,43 @@ class TSentity {
 class Circle extends Geometry {
   #segments = [];
   #radius;
-  constructor(x, y, z, radius = 2, detail = 1, material = new Material()) {
+  constructor(x, y, z,face='z', radius = 2, detail = 1, material = new Material()) {
     super(x, y, z);
     this.numSeg = radius * (6 * detail);
     this.#radius = radius;
-    this.position = new Point(this.x, this.y, this.z);
+    this.position = new Point(x, y, z);
+   
     this.material = material;
-    this.init();
+    this.init(face);
   }
 
-  init() {
+  init(face) {
+    
+    let [vecx, vecy, vecz] = [0,0, 0];
+    if (face === "z") {
+      vecx = this.#radius;
+    } else if (face === "y") {
+      vecz = this.#radius;
+    } else vecy = this.#radius;
     for (let i = 0; i < this.numSeg; i++) {
       let deg = (360 / this.numSeg) * i;
-
-      //example circle position [2,0,0] point [2,0,0] => rotate 2,0,0 around origin 2,0,0
-      this.#segments.push(new Point(this.#radius, 0, 0));
-
-      this.#segments[i].drotate(deg, "z", this.position);
+      
+      this.#segments.push(new Point(vecx,vecy,vecz));
+      
+      this.#segments[i].drotate(deg, face, this.position);
+    
     }
+    
+    this.rngcolorSegments()
+    
   }
   getSegments() {
     return this.#segments;
+  }
+  setSegment(index,x,y,z) {
+    this.#segments[index].x=x;
+    this.#segments[index].y=y;
+    this.#segments[index].z=z;
   }
   setRadius(rad) {
     this.#segments = [];
@@ -157,45 +174,115 @@ class Circle extends Geometry {
     this.init();
   }
   rotateSegs(deg, face = "z", origin = Point) {
+    // let [vecx, vecy, vecz] = [0, 0, 0];
+    // if (face === "z") {
+    //   vecx = this.#radius;
+    // } else if (face === "y") {
+    //   vecz = this.#radius;
+    // } else vecy = this.#radius;
     for (let i in this.#segments) {
+      // this.#segments[i].x = vecx
+      // this.#segments[i].y = vecy
+      // this.#segments[i].z = vecz
       this.#segments[i].drotate(deg, face, origin);
+      
     }
   }
+  rngcolorSegments(){
+    let colors =['@','#','%','$','!','+','<','/','-','+','^','>']
+    for(let i of this.#segments){
+      i.color= colors[Math.floor((Math.random()*colors.length))]
+
+    }
+    
+  }
   update(canvasContext = TSScreen) {
-    for (let i of c1.getSegments()) {
+    
+    for (let i of this.getSegments()) {
       canvasContext.tsupdate(
         Math.floor(i.x),
         Math.floor(i.y),
         Math.floor(i.z),
-        this.material.color
+        i.color
       );
+      
     }
   }
 }
+class Donut extends Geometry{
+  #segments=[]
+  constructor(x,y,z,face = 'z',segments = 50,radius=10,segrad=6,material = new Material ()){
+    super()
+    this.position = new Point(x, y, z);
+    this.numSeg= segments
+    this.segrad=segrad
+    this.radius = radius
+    this.face = face
+    this.material = material
+    this.init()
+  }
+  init(){
+    this.calcSegFace();
+    for(let i = 0 ;i<this.numSeg;i++){
+      let degree = (360/this.numSeg)*i;
+      
+      this.#segments.push(new Circle(...this.calcinitVec(),this.segface,this.segrad))
+      this.#segments[i].rotateSegs(degree,'z',this.position)
+    }
+   
+  }
+  calcinitVec(){
+    let [vecx, vecy, vecz] = [0,0, 0];
+    
+    if (this.face === "z") {
+      vecx = this.radius;
+    } else if (this.face === "y") {
+      vecz = this.radius;
+    } else vecy = this.radius;
+    return [vecx,vecy,vecz]
+  }
+  calcSegFace(){
+    
+    if(this.face === 'z'){
+      this.segface =this.segface = 'y'
+    } else if (this.face=== 'x'){
+      this.segface = 'y'
+    }else this.segface = 'z'
+  }
+  update(canvasContext = TSScreen) {
+    for (let i of this.#segments) {
+      i.update(canvasContext)
+    }
+    console.log('updating')
+}
+donutate(deg,axis = 'y',origin = this.position){
+  for(let i of this.#segments){
+    i.rotateSegs(deg,axis,origin)
+  }
+}
+}
+let canvas = new TSScreen(40, 20);
 
-let canvas = new TSScreen(50, 50);
-let c1 = new Circle(0, 0, 0, 15, 1);
-canvas.attachChild(c1);
+let d1 = new Donut(0,0,0,'z')
+
+canvas.attachChild(d1)
 
 
-canvas.update();
 
-canvas.tsdraw();
-
-let deg = 0;
-
+let time = 0;
 let interval = setInterval(()=>{
+
   console.clear()
- 
-  //c1.rotateSegs(deg, "x", c1.position);
-  c1.rotateSegs(deg, "x", c1.position);
-  c1.rotateSegs(deg, "z", c1.position);
+  d1.donutate(10,'y',d1.position)
+  d1.donutate(10,'x',d1.position)
+  d1.donutate(5,'z',d1.position)
   canvas.clear();
   canvas.update();
   canvas.tsdraw();
-  deg+=.1
-  console.log(deg)
-  if(deg === 360) clearInterval(interval)
+  
+  console.log(time)
+  time++
+  if(time === 300) clearInterval(interval)
 },100)
 
-//console.log(c1.getSegments())
+
