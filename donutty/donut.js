@@ -1,5 +1,4 @@
 "use strict";
-var term = require("terminal-kit").terminal;
 
 class TSScreen {
   #children = {};
@@ -7,15 +6,15 @@ class TSScreen {
     this.row = row;
     this.col = col;
     this.light = {
-      x : 0,
-      y : 0,
-      z:0,
-      near:-7,
-      far:7
+      x : -400,
+      y : -50,
+      z:25,
+      near:25,
+      far:-20
     }
     this.camCenter = new Point(0, 0,0);
     this.colSpread = colSpread;
-    this.background = background;
+    this.background = Number.NEGATIVE_INFINITY;
     this.init();
   }
   attachChild(child, id = `&${Object.keys(this.#children).length}`) {
@@ -30,9 +29,11 @@ class TSScreen {
   }
   init() {
     this.display = new Array(this.row * this.col).fill(this.background);
+    this.buffer = new Array(this.row * this.col).fill(this.background);
   }
   clear() {
     this.display = new Array(this.row * this.col).fill(this.background);
+    this.buffer = new Array(this.row * this.col).fill(this.background);
   }
   update() {
     for (let child in this.#children) {
@@ -41,35 +42,59 @@ class TSScreen {
     }
   }
   applyLight(x,y,z){
+    // let colors =[
+    //   '$', '@', '%', '#', '*', '/',
+    //   '|', '(', ')', '1', '{', '}',
+    //   '[', ']', '?', '-', '_', '+',
+    //   '~', '<', '>', 'i', '!', 'l',
+    //   'I', ';', ':', ',', '"', '^'
+    // ] 
+    
     let colors =[
-      '$', '@', '%', '#', '*', '/',
-      '|', '(', ')', '1', '{', '}',
-      '[', ']', '?', '-', '_', '+',
-      '~', '<', '>', 'i', '!', 'l',
-      'I', ';', ':', ',', '"', '^'
+      '@', '@', '@', '@', '@', '@', '@', '@',
+      '@', '@',  '%', '%', '%',
+      '%', '%', '%', '%', '#', '#',
+      '#', '#', '#', '#', '#', '*', '*', '*',
+      '*', '*', '*', '*', '*', '+', '+', '+',
+      '+', '+', '+', '+', '+', '+', '=', '=',
+      '=', '='
     ] 
-    let nearFar= this.light.far-this.light.near
-    let ratio = Math.abs(this.light.z-z)/nearFar
+    let nearFar= this.light.near-this.light.far
+    let ratioz = Math.abs(this.light.z-z)/nearFar
+    let ratioy = Math.abs(this.light.y-y)/nearFar
+   
+    let ratio = ratioz*ratioy
     return colors[Math.floor(colors.length*ratio)]
   }
   tsupdate(x, y,z, color = "@") {
     let scrnx = x + Math.ceil(this.col / 2 - this.camCenter.x);
     let scrny = y + 1 + Math.ceil(this.row / 2 - this.camCenter.y);
+    let scrnpos = this.toScreenPos(scrnx, scrny)
     color = this.applyLight(x,y,z)
+    
     if (!(scrnx > this.col || scrny > this.row || scrnx < 0 || scrny < 0)) {
-      this.display[this.toScreenPos(scrnx, scrny)] = color;
+      if(z>this.buffer[scrnpos] ){
+        this.buffer[scrnpos] = z;
+        this.display[scrnpos]= this.applyLight(x,y,z)
+      }
     }
   }
   tsdraw() {
     for (let i = 0; i < this.row; i++) {
+      this.replacePix(Number.NEGATIVE_INFINITY,this.display)
       let line = this.display
         .slice(i * this.col, i * this.col + this.col)
         .join(this.colSpread);
 
+
+      
       console.log(line);
     }
-
-    
+  }
+  replacePix(pixelval = '0',display){
+    while(display.indexOf(pixelval)!== -1 ){
+      display[display.indexOf(pixelval)]=' '
+    }
   }
   toScreenPos(x, y) {
     return x - 1 + (y - 1) * this.col;
@@ -261,15 +286,16 @@ donutate(deg,axis = 'y',origin = this.position){
 
 
 
-
 function main(){
   const args = [50,50,20]
   
   
   const canvas = new TSScreen(args[0], args[1]);
-  const d1 = new Donut(0,0,0,'z',100,14)
+  const d1 = new Donut(0,0,0,'z',200,12)
+
   //d1.donutate(45,'x',d1.position)
   canvas.attachChild(d1)
+
   canvas.update()
   canvas.tsdraw()
   let time = 0;
@@ -277,20 +303,21 @@ function main(){
   
     //console.log('\x1Bc');
     console.clear()
-    d1.donutate(10,'y',d1.position)
+    d1.donutate(15,'y',d1.position)
     d1.donutate(10,'x',d1.position)
-    d1.donutate(5,'z',d1.position)
+    d1.donutate(-10,'z',d1.position)
     canvas.clear();
     canvas.update();
     canvas.tsdraw();
     
   
     time++
-    if(time === 100) clearInterval(interval)
+    if(time === 1000) clearInterval(interval)
   },100)
   
 }
 main()
+
 
 
 
