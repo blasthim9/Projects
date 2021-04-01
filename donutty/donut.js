@@ -6,6 +6,13 @@ class TSScreen {
   constructor(col, row, background = " ", colSpread = " ") {
     this.row = row;
     this.col = col;
+    this.light = {
+      x : 0,
+      y : 0,
+      z:0,
+      near:-7,
+      far:7
+    }
     this.camCenter = new Point(0, 0,0);
     this.colSpread = colSpread;
     this.background = background;
@@ -13,9 +20,13 @@ class TSScreen {
   }
   attachChild(child, id = `&${Object.keys(this.#children).length}`) {
     this.#children[id] = child;
+
   }
   getChildren() {
     return this.#children;
+  }
+  getChildPos(id){
+    return this.#children['&0'].position
   }
   init() {
     this.display = new Array(this.row * this.col).fill(this.background);
@@ -29,10 +40,22 @@ class TSScreen {
       this.#children[child].update(this);
     }
   }
+  applyLight(x,y,z){
+    let colors =[
+      '$', '@', '%', '#', '*', '/',
+      '|', '(', ')', '1', '{', '}',
+      '[', ']', '?', '-', '_', '+',
+      '~', '<', '>', 'i', '!', 'l',
+      'I', ';', ':', ',', '"', '^'
+    ] 
+    let nearFar= this.light.far-this.light.near
+    let ratio = Math.abs(this.light.z-z)/nearFar
+    return colors[Math.floor(colors.length*ratio)]
+  }
   tsupdate(x, y,z, color = "@") {
     let scrnx = x + Math.ceil(this.col / 2 - this.camCenter.x);
     let scrny = y + 1 + Math.ceil(this.row / 2 - this.camCenter.y);
-    
+    color = this.applyLight(x,y,z)
     if (!(scrnx > this.col || scrny > this.row || scrnx < 0 || scrny < 0)) {
       this.display[this.toScreenPos(scrnx, scrny)] = color;
     }
@@ -43,20 +66,10 @@ class TSScreen {
         .slice(i * this.col, i * this.col + this.col)
         .join(this.colSpread);
 
-      if (i === Math.floor(this.row / 2)) {
-        let halfway = Math.floor(line.length / 2);
-
-        let result =
-          line.slice(0, halfway - 1) +
-          "\x1b[36m" +
-          line.slice(halfway - 1, halfway) +
-          "\x1b[0m" +
-          line.slice(halfway, line.length);
-        console.log(result, Math.floor(line.length / 2), line.length);
-      } else console.log(line);
+      console.log(line);
     }
 
-    console.log("endframe\n");
+    
   }
   toScreenPos(x, y) {
     return x - 1 + (y - 1) * this.col;
@@ -157,7 +170,7 @@ class Circle extends Geometry {
     
     }
     
-    this.rngcolorSegments()
+  
     
   }
   getSegments() {
@@ -174,27 +187,10 @@ class Circle extends Geometry {
     this.init();
   }
   rotateSegs(deg, face = "z", origin = Point) {
-    // let [vecx, vecy, vecz] = [0, 0, 0];
-    // if (face === "z") {
-    //   vecx = this.#radius;
-    // } else if (face === "y") {
-    //   vecz = this.#radius;
-    // } else vecy = this.#radius;
+   
     for (let i in this.#segments) {
-      // this.#segments[i].x = vecx
-      // this.#segments[i].y = vecy
-      // this.#segments[i].z = vecz
       this.#segments[i].drotate(deg, face, origin);
-      
     }
-  }
-  rngcolorSegments(){
-    let colors =['@','#','%','$','!','+','<','/','-','+','^','>']
-    for(let i of this.#segments){
-      i.color= colors[Math.floor((Math.random()*colors.length))]
-
-    }
-    
   }
   update(canvasContext = TSScreen) {
     
@@ -241,6 +237,7 @@ class Donut extends Geometry{
     } else vecy = this.radius;
     return [vecx,vecy,vecz]
   }
+
   calcSegFace(){
     
     if(this.face === 'z'){
@@ -253,7 +250,7 @@ class Donut extends Geometry{
     for (let i of this.#segments) {
       i.update(canvasContext)
     }
-    console.log('updating')
+    
 }
 donutate(deg,axis = 'y',origin = this.position){
   for(let i of this.#segments){
@@ -261,28 +258,39 @@ donutate(deg,axis = 'y',origin = this.position){
   }
 }
 }
-let canvas = new TSScreen(40, 20);
-
-let d1 = new Donut(0,0,0,'z')
-
-canvas.attachChild(d1)
 
 
 
-let time = 0;
-let interval = setInterval(()=>{
 
-  console.clear()
-  d1.donutate(10,'y',d1.position)
-  d1.donutate(10,'x',d1.position)
-  d1.donutate(5,'z',d1.position)
-  canvas.clear();
-  canvas.update();
-  canvas.tsdraw();
+function main(){
+  const args = [50,50,20]
   
-  console.log(time)
-  time++
-  if(time === 300) clearInterval(interval)
-},100)
+  
+  const canvas = new TSScreen(args[0], args[1]);
+  const d1 = new Donut(0,0,0,'z',100,14)
+  //d1.donutate(45,'x',d1.position)
+  canvas.attachChild(d1)
+  canvas.update()
+  canvas.tsdraw()
+  let time = 0;
+  let interval = setInterval(()=>{
+  
+    //console.log('\x1Bc');
+    console.clear()
+    d1.donutate(10,'y',d1.position)
+    d1.donutate(10,'x',d1.position)
+    d1.donutate(5,'z',d1.position)
+    canvas.clear();
+    canvas.update();
+    canvas.tsdraw();
+    
+  
+    time++
+    if(time === 100) clearInterval(interval)
+  },100)
+  
+}
+main()
+
 
 
