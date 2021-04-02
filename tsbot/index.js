@@ -1,6 +1,6 @@
 require("dotenv").config();
 TOKEN = process.env.TOKEN;
-
+const cleverbot = require('./cleverbot.js')
 const fs = require("fs");
 const { Client, MessageAttachment, DiscordAPIError } = require("discord.js");
 const Discord = require("discord.js");
@@ -15,7 +15,7 @@ const defaultprefix = "~";
 let setEmbeds = require("./embeds");
 const ytdl = require("ytdl-core");
 const queue = new Map();
-
+const chatbot = new cleverbot()
 const search = require("youtube-search");
 const opts = {
   maxResults: 10,
@@ -144,6 +144,9 @@ client.on("message", async (message) => {
   } else if (message.content.startsWith(`${guildPrefix}leave`)) {
     message.channel.send("bye bitch");
     message.member.voice.channel.leave();
+  } else if (message.content.startsWith(`${guildPrefix}chat`)){
+
+    chatbot.cleverchat(args,message)
   }
 });
 client.on("message", async (message) => {
@@ -153,12 +156,13 @@ client.on("message", async (message) => {
   if (message.content == "ts help" || message.content == "ts -h") {
     console.log(cmdpref);
     const embed = await setEmbeds.help(client, cmdpref);
-
+    
     message.channel.send(embed);
 
     console.log("done");
   }
 });
+
 
 // Log our bot in using the token from https://discord.com/developers/applications
 client.login(TOKEN);
@@ -166,6 +170,7 @@ client.login(TOKEN);
 //test area
 const puppeteer = require("puppeteer");
 const { writeFile } = require("fs-extra");
+const clever = require("./cleverbot.js");
 
 async function render() {
   const browser = await puppeteer.launch();
