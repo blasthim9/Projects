@@ -48,9 +48,9 @@ function setup() {
   rows = 200;
   
   cam = createCamera();
-  scale.y = random(5,9)
+  scale.y = 12
   camPos.updatePos(cols, rows);
-  cam.setPosition(camPos.x, camPos.y, 5000);
+  cam.setPosition(camPos.x, camPos.y, 4000);
   cam.lookAt(camPos.x, camPos.y, camPos.x, camPos.z);
   setCamera(cam);
   
@@ -71,6 +71,7 @@ function setup() {
       sliderxtaper.position().x + 300,
       sliderxtaper.position().y,-10
     )
+    
   );
   
  
@@ -79,7 +80,7 @@ function setup() {
   input = createInput();
   input.position(-500, 65);
   input.style("width","30px")
-  
+  background("#4A5B6E");
   
   // frameRate(20)
   // createLoop({duration:3, gif:true})
@@ -88,6 +89,7 @@ function setup() {
 
 function draw() {
   //cols++;
+  
   zinc += 0.008;
   input.value(sliderxtaper.value());
   //orbitControl();
@@ -97,9 +99,7 @@ function draw() {
   }
   buttons[0].mousePressed(()=>{play(sliderxtaper,btn1toggle,-100,100,.1)})
   canvas.position((windowWidth - width) / 2, (windowHeight - height) / 2);
-  // if(keyIsDown(CONTROL)){
-  //   background("#FF7F50");
-  // }
+ 
   background("#4A5B6E");
   let yoff = time
   for (let y = 0; y < rows; y++) {
@@ -108,12 +108,12 @@ function draw() {
     for (let x = 0; x < cols; x++) {
       let noiseparam = noise(xoff, yoff, zinc) * 255;
 
-      blendMode(BLEND );
+      blendMode(BLEND);
       noStroke();
       if (coggle === true) {
-        rotateY(noise(xoff, yoff, zinc) / 10);
-        rotateX(noise(xoff, yoff, zinc) / input.value());
-        //rotateZ(noise(xoff, yoff, zinc) / 95);
+        rotateY(noise(xoff, yoff, zinc) / 30);
+        rotateX(noise(xoff, yoff, zinc) / 5);
+        rotateZ(noise(xoff, yoff, zinc) / 15);
         donk++;
       }
 
@@ -139,7 +139,7 @@ function draw() {
         Math.abs(Math.cos((noiseparam / 255) * 2 * Math.PI)) * 100,
         0,
         Math.abs(Math.sin((noiseparam / 255) * 2 * Math.PI)) * 100,
-        noiseparam
+        20
       );
       
       rect(vec.x, vec.y, scale.x, scale.y);

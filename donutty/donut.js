@@ -1,5 +1,5 @@
 "use strict";
-
+const fs = require('fs');
 class TSScreen {
   #children = {};
   constructor(col, row, background = " ", colSpread = " ") {
@@ -306,13 +306,14 @@ function main(){
     d1.donutate(15,'y',d1.position)
     d1.donutate(10,'x',d1.position)
     d1.donutate(-10,'z',d1.position)
+    canvas.displayToFile()
     canvas.clear();
     canvas.update();
     canvas.tsdraw();
     
   
     time++
-    if(time === 1000) clearInterval(interval)
+    if(time === 50) clearInterval(interval)
   },100)
   
 }

