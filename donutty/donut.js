@@ -298,7 +298,7 @@ function main(){
 
   canvas.update()
   canvas.tsdraw()
-  let time = 0;
+  let time = 0; 
   let interval = setInterval(()=>{
   
     //console.log('\x1Bc');
