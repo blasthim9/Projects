@@ -1,0 +1,23 @@
+body,html {
+  
+  height: 100%;
+  margin: 0;
+ 
+
+  
+}
+body{
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: black;
+}
+#terrain {
+ 
+  width: 100%;
+  height: 80%;
+ 
+  background-color: rgba(50, 50, 50, 255);
+
+
+}
