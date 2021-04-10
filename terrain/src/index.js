@@ -7,7 +7,6 @@ import {
 	RGBAFormat,
 	SphereGeometry,
 	Vector3,
-	OrbitControls
 } from "three";
 
 let canvas,
