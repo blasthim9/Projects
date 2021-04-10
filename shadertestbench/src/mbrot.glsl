@@ -17,9 +17,11 @@
 // attribute vec3 normal;
 // attribute vec2 uv;
 //my variables
+
 varying vec2 vUv;
 
 void main() {
+  
   vUv = uv;
   gl_Position = projectionMatrix *
     modelViewMatrix *

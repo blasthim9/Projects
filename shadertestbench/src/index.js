@@ -2,11 +2,15 @@ import * as THREE from "three";
 import * as dat from "dat.gui";
 import fragmentShader from "./mandelbrotfrag.glsl";
 import vertexShader from "./mbrot.glsl";
+import juliaShader from "./juliaset.glsl";
 import Stats from "stats-js";
 
 let stats, gui, mbrot, scene, material, mouse, renderer, canvas, camera;
 let mouseIsDown = false;
-let input;
+let input,
+	julia,
+	jbool = false,
+	jshader;
 init();
 
 render();
@@ -14,7 +18,7 @@ render();
 function init() {
 	canvas = document.querySelector("#c");
 
-	renderer = new THREE.WebGLRenderer({ canvas });
+	renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 	renderer.autoClearColor = false;
 	stats = new Stats();
 
@@ -26,21 +30,30 @@ function init() {
 		1, // right
 		1, // top
 		-1, // bottom
-		-1, // near,
-		1 // far
+		-10, // near,
+		100 // far
 	);
+	let config = {
+		test: {
+			scale: Number(0.010001).toFixed(20),
+			posx: 0.437924,
+			posy: 0.341892,
+			maxIter: 2000,
+		},
+		live: new THREE.Vector4(0.0, 0.0, 1.0, 4.0),
+		mode: "test",
+	};
 	console.log();
 	scene = new THREE.Scene();
-	const plane = new THREE.PlaneGeometry(2, 2);
+	const plane = new THREE.PlaneGeometry(2, 2,10,10);
 	mouse = new THREE.Vector2();
 
 	const uniforms = {
 		aspect: { value: canvas.width / canvas.height },
 		iTime: { value: 0 },
-		maxIter: { value: 250.0 },
-		ucenter: { value: new THREE.Vector2(0.0, 0.0) },
-		scale: { value: 4.0 },
-		Area: { value: new THREE.Vector4(0.0, 0.0, 4.0, 4.0) },
+		maxIter: { value: 255 },
+
+		Area: { value: new THREE.Vector4(0.0, 0.0, 1.0, 4.0) },
 		numzoom: { value: 0 },
 		zoom: { value: 1 },
 		startuv: { value: new THREE.Vector2(0.0, 0.0) },
@@ -51,22 +64,41 @@ function init() {
 	canvas.addEventListener("mouseup", function () {
 		mouseIsDown = false;
 	});
+	canvas.oncontextmenu = function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+	};
 
 	document.addEventListener("keydown", onKeyEvent);
-	//canvas.addEventListener('keydown', onKeyEvent);
-	//WTF??????????????????
+
 	material = new THREE.ShaderMaterial({
 		uniforms: uniforms,
 		vertexShader: vertexShader,
 		fragmentShader: fragmentShader,
 	});
-	mbrot = new THREE.Mesh(plane, material);
 
+	jshader = new THREE.ShaderMaterial({
+		uniforms: uniforms,
+		vertexShader: vertexShader,
+		fragmentShader: juliaShader,
+	});
+	
+	if (jbool === true) {
+		mbrot = new THREE.Mesh(plane, jshader);
+	} else mbrot = new THREE.Mesh(plane, material);
+	let wmbrot = new THREE.Mesh(plane, new THREE.MeshBasicMaterial());
+	wmbrot.material.wireframe = true;
+	wmbrot.material.depthTest= false;
+	wmbrot.position.set(0,0,-2)
+	mbrot.position.set(0,0,1)
+	mbrot.material.transparent = false;
+	
+	
 	mbrot.util = {
-		posx: 0,
-		posy: 0,
+		posx: 0.0,
+		posy: 0.0,
 		scaleX: 0,
-		scaleY: 0,
+		scaleY: 0.0,
 		mouse: new THREE.Vector2(0, 0),
 		scale: 4,
 		aspect: 1,
@@ -83,12 +115,18 @@ function init() {
 			}
 			this.laggingpos.lerpVectors(
 				this.laggingpos,
-				new THREE.Vector2(this.posx, this.posy),
+				new THREE.Vector2(
+					Number(this.posx).toFixed(20),
+					Number(this.posy).toFixed(20)
+				),
 				0.03
 			);
 			this.laggingscale.lerpVectors(
 				this.laggingscale,
-				new THREE.Vector2(this.scaleX, this.scaleY),
+				new THREE.Vector2(
+					Number(this.scaleX).toFixed(20),
+					Number(this.scaleY).toFixed(20)
+				),
 				0.03
 			);
 			return {
@@ -102,11 +140,17 @@ function init() {
 
 	mbrot.updateScreen = function (canvas = { width: 0, height: 0 }) {
 		const set = this.util.scalefunc(canvas);
-
 		this.material.uniforms.Area.value.set(set.x, set.y, set.w, set.h);
 	};
 
 	mbrot.updateScreen(canvas);
+	mbrot.rescaleLerp = function () {
+		this.util.laggingscale.x = this.util.scaleX;
+		this.util.laggingscale.y = this.util.scaleY;
+		this.util.laggingpos.x = this.util.posx;
+		this.util.laggingpos.y = this.util.posy;
+	};
+	//scene.add(wmbrot);
 	scene.add(mbrot);
 	gui = guiInit();
 }
@@ -119,30 +163,33 @@ function resizeRendererToDisplaySize(renderer) {
 	const needResize = canvas.width !== width || canvas.height !== height;
 	if (needResize) {
 		renderer.setSize(width, height, false);
-
+		mbrot.updateScreen(canvas);
+		mbrot.rescaleLerp();
 		console.log(width, height, "hit");
 	}
 	return needResize;
 }
 
 function render(time) {
+	requestAnimationFrame(render);
 	time *= 0.001; // convert to seconds
+
 	stats.begin();
 	resizeRendererToDisplaySize(renderer);
 	gui.updateDisplay();
 	const canvas = renderer.domElement;
 	mbrot.updateScreen(canvas);
 	mbrot.material.uniforms.iTime.value = time;
+
 	gui.width = canvas.width / 4;
 
 	renderer.render(scene, camera);
 	stats.end();
 	//console.log(hello,'123')
-	requestAnimationFrame(render);
 }
 function guiInit() {
 	let gui = new dat.GUI();
-	gui.add(mbrot.material.uniforms.maxIter, "value").min(0).max(15000).step(10);
+	gui.add(mbrot.material.uniforms.maxIter, "value").min(0).max(1000).step(1);
 	gui.add(mbrot.material.uniforms.Area.value, "x");
 	gui.add(mbrot.material.uniforms.Area.value, "y");
 	gui.add(mbrot.material.uniforms.Area.value, "z");
@@ -152,7 +199,11 @@ function guiInit() {
 	return gui;
 }
 function onMouseEvent(event) {
+	let canvasEvent = new Event("canvasEvent");
+
 	var e = event.button;
+
+	console.log(e);
 	mouseIsDown = true;
 	if (e == 0) {
 		let interval = setInterval(() => {
@@ -167,10 +218,17 @@ function onMouseEvent(event) {
 
 		mbrot.util.posx -= (0.5 - normx) * mbrot.util.scaleX;
 		mbrot.util.posy -= (0.5 - normy) * mbrot.util.scaleX;
+	} else if (e == 2) {
+		let interval = setInterval(() => {
+			if (mouseIsDown == false) clearInterval(interval);
+			mbrot.util.scale *= 1.01;
+		}, 10);
 	}
 }
+
 function onKeyEvent(event) {
 	let e = event.key;
+
 	if (e === "e") {
 		mbrot.util.scale *= 1.01;
 	} else if (e === "q") {
@@ -186,7 +244,7 @@ function onKeyEvent(event) {
 		mbrot.util.posy += 0.01 * mbrot.util.scale;
 	} else if (e === "r") {
 		mbrot.material.uniforms.maxIter.value += 3;
-	} else if(e==="z"){
+	} else if (e === "z") {
 		mbrot.material.uniforms.numzoom.value++;
 	}
 }
