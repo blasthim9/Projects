@@ -22,8 +22,8 @@ float noise(vec2 p, float freq ){
 
 float pNoise(vec2 p, int res){
 	float persistance = .5;
-	float n = 0.;
-	float normK = .1; //change the brightness
+	float n = .2;
+	float normK = .5; //change the brightness
 	float f = 4.;
 	float amp =1.;
 	int iCount = 0;
