@@ -17,20 +17,81 @@ const ytdl = require("ytdl-core");
 const queue = new Map();
 const chatbot = new cleverbot();
 const search = require("youtube-search");
+
 const opts = {
 	maxResults: 10,
 	key: process.env.KEY,
 };
+let target = new Discord.GuildMember(client);
+let oldTarget;
+let dconnection;
+console.clear();
+
+target.user = new Discord.User(client, {
+	id: null,
+	username: null,
+});
+
 /**
  * The ready event is vital, it means that only _after_ this will your bot start reacting to information
  * received from Discord
  */
 client.on("ready", () => {
+	client.guilds.cache.forEach((el) => {
+		let guildChannels = el.channels.cache.array();
+		el.tsData = {
+			shooter: null,
+		};
+
+		guildChannels.some((gchans) => {
+			if (gchans.type === "text" && gchans.rawPosition === 0) {
+				el.tsData.mainTextChannel = gchans;
+
+				return true;
+			}
+		});
+	});
+
+	client.guilds.cache.forEach((el) => {
+		let tempguild = el;
+
+		tempguild.channels.cache.some((vch) => {
+			if (vch.type == "voice") {
+				console.log(vch.id, vch.name);
+				vch.join();
+				vch.leave();
+				return true;
+			}
+		});
+	});
+
 	console.log("I am ready!");
 });
 
+client.on("voiceStateUpdate", async (oldMember, newMember) => {
+	if (target !== null) {
+		if (newMember.id !== client.user.id && newMember.id === target.user.id) {
+			let newUserChannel = newMember.channel;
+			let oldUserChannel = oldMember.channel;
+
+			//	console.log(newMember.member,'old \n\n',oldMember.member)
+
+			if (newUserChannel !== null) {
+				{
+					dconnection = await newUserChannel.join();
+				
+					donnieListen();
+				}
+			} else if (newUserChannel === null) {
+				oldUserChannel.leave();
+				// User leaves a voice channel
+			}
+		}
+	}
+});
 client.on("message", async (message) => {
 	if (message.author.bot) return;
+
 	if (!message.guild) return;
 	let guildPrefix = prefix.getPrefix(message.guild.id);
 	if (!guildPrefix) {
@@ -87,6 +148,10 @@ client.on("message", async (message) => {
 			const attachment = new MessageAttachment("./screenshots/shot.png");
 			message.channel.send(`${message.author},`, attachment);
 		});
+	} else if (command == `${guildPrefix}` + "systemcheck") {
+		console.log("command == systemcheck");
+		let answer = "stfu there's no diagnostic tool idiot";
+		message.channel.send(answer);
 	} else if (command == `${guildPrefix}` + "telljoke") {
 		let url = "https://official-joke-api.appspot.com/random_joke";
 		https.get(url, function (res) {
@@ -141,13 +206,72 @@ client.on("message", async (message) => {
 	} else if (message.content.startsWith(`${guildPrefix}stop`)) {
 		stop(message, serverQueue);
 		return;
-	} else if (message.content.startsWith(`${guildPrefix}leave`)) {
-		message.channel.send("bye bitch");
+	} else if (command === `${guildPrefix}` + "leave") {
+		message.channel.send("bye bye");
 		message.member.voice.channel.leave();
 	} else if (message.content.startsWith(`${guildPrefix}chat`)) {
 		chatbot.cleverchat(args, message);
+	} else if (command === `${guildPrefix}` + "jointest") {
+		console.log(args);
+		message.member.voice.channel.join();
+	} else if (command === `${guildPrefix}` + "leaveall") {
+		message.channel.send("leaving all channels");
+		let tempguild = message.guild;
+		let vChannels = new Array(0);
+
+		tempguild.channels.cache.forEach((el) => {
+			if (el.type == "voice") {
+				vChannels.push(el);
+			}
+		});
+		vChannels.forEach((el) => {
+			el.leave();
+		});
+	} else if (command === `${guildPrefix}` + "donnieTarget") {
+		if (message.guild.tsData.shooter === null) {
+			message.guild.tsData.shooter = message.author;
+		}
+		
+		if (message.guild.tsData.shooter == message.author) {
+			let testguild;
+			let sTarget = args.join(" ");
+
+			testguild = message.guild;
+			testguild.members.cache.forEach((el) => {
+				if (el.user.username === sTarget) {
+					console.log(el);
+					target = el;
+
+					message.channel.send(
+						"Donnie Dornberry Awoken \n\tTarget Locked: \n\t\tUserID: " +
+							target.user.id +
+							"\n\t\tUsername: " +
+							target.user.username
+					);
+				}
+			});
+			//let targetState = new Discord.VoiceState()
+			if (target.voice.channelID !== null) {
+				dconnection = await target.voice.channel.join();
+				dconnection.removeAllListeners()
+				donnieListen();
+			}
+		} else {
+			message.channel.send('Permission Denied. Current Master: '+ message.guild.tsData.shooter.username)
+		}
+	} else if (command === `${guildPrefix}` + "getTarget") {
+		message.channel.send("Current Target: " + target.user.username);
+	} else if (command === `${guildPrefix}` + "clearTarget") {
+		message.guild.tsData.shooter = null;
+		if (message.guild.me.voice.channel !== null) {
+			message.guild.me.voice.channel.leave();
+		}
+		target = null;
+
+		message.channel.send("Current Target: " + target);
 	}
 });
+
 client.on("message", async (message) => {
 	if (message.author.bot) return;
 	console.log(message.content);
@@ -162,7 +286,6 @@ client.on("message", async (message) => {
 	}
 });
 
-
 // Log our bot in using the token from https://discord.com/developers/applications
 client.login(TOKEN);
 
@@ -170,6 +293,7 @@ client.login(TOKEN);
 const puppeteer = require("puppeteer");
 const { writeFile } = require("fs-extra");
 const clever = require("./cleverbot.js");
+const { time } = require("console");
 
 async function render() {
 	const browser = await puppeteer.launch();
@@ -252,7 +376,7 @@ function skip(message, serverQueue) {
 	if (!serverQueue) return message.channel.send("Song list empty idiot! ");
 	serverQueue.connection.dispatcher.end();
 }
-
+console.log("restart");
 function stop(message, serverQueue) {
 	if (!message.member.voice.channel)
 		return message.channel.send("Denied! You must be in the voice channel");
@@ -286,4 +410,26 @@ function play(guild, song) {
 
 	dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
 	serverQueue.textChannel.send(`Current Song: **${song.title}**`);
+}
+
+async function donnieListen() {
+	dconnection.play("./sounds/donnie.mp3").setVolume(0)
+	dconnection.dispatcher.once("finish",()=>{
+		dconnection.removeAllListeners()
+		donnieListen()
+	})
+	dconnection.on("speaking", (user, speaking) => {
+		if (target.user.id === user.id) {
+		
+			if(speaking.bitfield === 1){
+				dconnection.dispatcher.setVolume(5)
+			} else{
+				dconnection.dispatcher.setVolume(0)
+				
+			}
+		
+
+		
+		}
+	});
 }
